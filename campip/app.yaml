@@ -1,0 +1,189 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: campip
+  labels:
+    name: campip
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: campip-data-pv
+  labels:
+    app: campip-db
+    type: local
+  namespace: campip
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    type: DirectoryOrCreate
+    path: /mnt/data/
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: campip-data-pvc
+  labels:
+    app: campip-db
+  namespace: campip
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: campip-db-config
+  labels:
+    app: campip-db
+    service: campip
+  namespace: campip
+data:
+  POSTGRES_DB: "campip_db"
+  POSTGRES_USER: "root"
+  POSTGRES_PASSWORD: "campip"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: campip-db
+    service: campip
+  name: campip-db-svc
+  namespace: campip
+spec:
+  ports:
+    - port: 5432
+      name: campid-db
+  clusterIP: None
+  selector:
+    app: campip-db
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    service: campip
+    app: campip-db
+  name: campip-db
+  namespace: campip
+spec:
+  serviceName: campip-db-svc
+  selector:
+    matchLabels:
+      app: campip-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: campip-db
+    spec:
+      volumes:
+        - name: campip-db-volume
+          persistentVolumeClaim:
+            claimName: campip-data-pvc
+      containers:
+        - name: campip-db
+          image: postgres:13.2
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: campip-db-config
+          ports:
+            - containerPort: 5432
+              name: campip-db
+          volumeMounts:
+            - name: campip-db-volume
+              mountPath: "/var/lib/postgresql/data"
+              subPath: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: campip-api
+  name: campip-svc
+  namespace: campip
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: campip-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: campip-api
+  name: campip-app
+  namespace: campip
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: campip-api
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: campip-api
+    spec:
+      containers:
+        - image: ewestudios/campip:latest
+          imagePullPolicy: Always
+          name: campip-api
+          ports:
+            - containerPort: 8080
+              name: campip-api
+          env:
+            - name: ADDR
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+            - name: RUST_LOG
+              value: DEBUG
+            - name: POSTGRES_ADDR
+              value: campip-db-svc.campip.svc
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: campip-db-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: campip-db-config
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: campip-db-config
+                  key: POSTGRES_USER
+          resources:
+            limits:
+              cpu: "250m"
+              memory: "64Mi"
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      securityContext: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: campip-api-ingress
+  annotations:
+    
