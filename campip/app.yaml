@@ -6,23 +6,40 @@ metadata:
   labels:
     name: campip
 ---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  namespace: campip
+  name: campip-local-volume-storage-class
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: campip-data-pv
+  namespace: campip
   labels:
     app: campip-db
-    type: local
-  namespace: campip
+    type: local-volume
 spec:
-  storageClassName: manual
   capacity:
     storage: 5Gi
+  volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
-  hostPath:
-    type: DirectoryOrCreate
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: campip-local-volume-storage-class
+  local:
     path: /mnt/data/
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+            - local-node
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -32,12 +49,12 @@ metadata:
     app: campip-db
   namespace: campip
 spec:
-  storageClassName: manual
+  storageClassName: campip-local-volume-storage-class
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 5Gi
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -186,4 +203,13 @@ kind: Ingress
 metadata:
   name: campip-api-ingress
   annotations:
-    
+spec:
+  rules:
+    - http:
+        path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: campip-svc
+            port:
+              number: 8080

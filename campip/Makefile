@@ -1,5 +1,7 @@
-plan:
-	nomad job plan service.nomad
+DIRNAME="campip"
+mkdir -p /mnt/disk/$DIRNAME
+chcon -Rt svirt_sandbox_file_t /mnt/disk/$DIRNAME
+chmod 777/mnt/disk/$DIRNAME
 
-run:
-	nomad job run service.nomad
+deploy:
+	k apply -f app.yaml
