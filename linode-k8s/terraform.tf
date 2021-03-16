@@ -4,7 +4,7 @@ variable "linode_token" {
 
 variable "region" {
 	type = string
-	default = "ap-southeast"
+	default = "ap-south"
 }
 
 variable "node_type" {
