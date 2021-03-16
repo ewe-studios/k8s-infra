@@ -1,6 +1,3 @@
-[submodule "linode-blockstorage-csi-driver"]
-	path = linode-blockstorage-csi-driver
-	url = git@github.com:Ewe-Studios/linode-blockstorage-csi-driver.git
 [submodule "terraform-linode-k8s"]
 	path = terraform-linode-k8s
 	url = git@github.com:linode/terraform-linode-k8s.git

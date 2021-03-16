@@ -1,0 +1,8 @@
+.terraform
+*.tfstate
+*.tfstate.*
+linode-k8s/.terraform
+*/*.tfstate
+**.tfstate
+linode-k8s/*.tfstate
+linode-k8s/*.tfstate.*
