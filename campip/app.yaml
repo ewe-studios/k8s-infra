@@ -136,7 +136,7 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-    - port: 80
+    - port: 8090
       protocol: TCP
       targetPort: 8080
   selector:
@@ -147,6 +147,7 @@ kind: Deployment
 metadata:
   labels:
     app: campip-api
+    typ: deployment
     service: campip
   name: campip-app
   namespace: campip
@@ -206,8 +207,11 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: campip-api-ingress
-  service: campip
+  namespace: campip
+  labels:
+    app: campip-api
   annotations:
+    kubernetes.io/ingress.class: "ambassador"
 spec:
   rules:
     - host: campip.com
@@ -219,4 +223,4 @@ spec:
             service:
               name: campip-app-svc
               port:
-                number: 8080
+                number: 8090
