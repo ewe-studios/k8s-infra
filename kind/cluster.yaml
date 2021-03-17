@@ -13,5 +13,14 @@ nodes:
     hostPort: 80
   - containerPort: 443
     hostPort: 443
+  extraMounts:
+    - hostPath: /home/darkstar/k8s-data
+      containerPath: /mnt/dev1
 - role: worker
+  extraMounts:
+    - hostPath: /home/darkstar/k8s-data
+      containerPath: /mnt/dev1
 - role: worker
+  extraMounts:
+    - hostPath: /home/darkstar/k8s-data
+      containerPath: /mnt/dev1

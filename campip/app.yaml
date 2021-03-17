@@ -5,6 +5,7 @@ metadata:
   name: campip
   labels:
     name: campip
+    service: campip
 ---
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
@@ -22,6 +23,7 @@ metadata:
   labels:
     app: campip-db
     type: local-volume
+    service: campip
 spec:
   capacity:
     storage: 5Gi
@@ -31,7 +33,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: campip-local-volume-storage-class
   local:
-    path: /mnt/data/
+    path: /mnt/dev1
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -39,7 +41,7 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-            - local-node
+            - kind-worker
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -47,6 +49,7 @@ metadata:
   name: campip-data-pvc
   labels:
     app: campip-db
+    service: campip
   namespace: campip
 spec:
   storageClassName: campip-local-volume-storage-class
@@ -81,7 +84,6 @@ spec:
   ports:
     - port: 5432
       name: campid-db
-  clusterIP: None
   selector:
     app: campip-db
 ---
@@ -128,7 +130,8 @@ kind: Service
 metadata:
   labels:
     app: campip-api
-  name: campip-svc
+    service: campip
+  name: campip-app-svc
   namespace: campip
 spec:
   type: LoadBalancer
@@ -144,6 +147,7 @@ kind: Deployment
 metadata:
   labels:
     app: campip-api
+    service: campip
   name: campip-app
   namespace: campip
 spec:
@@ -202,14 +206,17 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: campip-api-ingress
+  service: campip
   annotations:
 spec:
   rules:
-    - http:
-        path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: campip-svc
-            port:
-              number: 8080
+    - host: campip.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: campip-app-svc
+              port:
+                number: 8080
